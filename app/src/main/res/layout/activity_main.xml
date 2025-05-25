@@ -7,6 +7,15 @@
     android:padding="24dp"
     android:background="#FFFFFF">
 
+    <ImageView
+        android:id="@+id/questionImage"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:src="@drawable/wieloryb"
+        android:scaleType="centerCrop"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
+
     <TextView
         android:id="@+id/appTitle"
         android:layout_width="wrap_content"
