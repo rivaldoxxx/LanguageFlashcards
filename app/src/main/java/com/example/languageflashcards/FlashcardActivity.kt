@@ -1,12 +1,13 @@
 package com.example.languageflashcards
 
 import android.animation.ValueAnimator
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.CycleInterpolator
 import android.view.animation.TranslateAnimation
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -16,7 +17,6 @@ class FlashcardActivity : AppCompatActivity() {
 
     private val numberOfFlashcards = 4
     private val videoViews = mutableListOf<VideoView>()
-    private var currentPlayingIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +29,12 @@ class FlashcardActivity : AppCompatActivity() {
         val scrollView = findViewById<LockableHorizontalScrollView>(R.id.scrollView)
         val container = findViewById<LinearLayout>(R.id.carouselContainer)
         scrollView.isScrollingEnabled = false
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val cardWidth = 300.dpToPx()
+        val sidePadding = (screenWidth - cardWidth) / 2
+
+        container.setPadding(sidePadding, 0, sidePadding, 0)
 
         val flashcards = getFlashcardsForCategory(category).shuffled()
 
@@ -41,7 +47,7 @@ class FlashcardActivity : AppCompatActivity() {
 
             val card = LinearLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(300.dpToPx(), ViewGroup.LayoutParams.MATCH_PARENT).apply {
-                    setMargins(16, 0, 16, 0)
+                    setMargins(32, 0, 32, 0)
                 }
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -50,26 +56,28 @@ class FlashcardActivity : AppCompatActivity() {
             if (flashcard.isVideo) {
                 val videoView = VideoView(this).apply {
                     layoutParams = LinearLayout.LayoutParams(200.dpToPx(), 200.dpToPx())
-                    visibility = View.INVISIBLE
-                    setVideoURI(flashcard.uri)
+                    setZOrderOnTop(true)
 
                     setOnPreparedListener { mp ->
-                        mp.isLooping = true
+                        mp.isLooping = false
                         mp.setVolume(1f, 1f)
-                        visibility = View.VISIBLE
+                        start()
+                        pause()
                     }
 
                     setOnErrorListener { _, _, _ ->
-                        Toast.makeText(context, "Nie można odtworzyć wideo", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@FlashcardActivity, "Nie można odtworzyć wideo", Toast.LENGTH_SHORT).show()
                         true
                     }
+
+                    flashcard.uri?.let { setVideoURI(it) }
                 }
 
                 videoViews.add(videoView)
                 card.addView(videoView)
 
                 val replayButton = Button(this).apply {
-                    text = "▶️ Odtwórz ponownie"
+                    text = "▶️ Odtwórz"
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
@@ -101,29 +109,13 @@ class FlashcardActivity : AppCompatActivity() {
                     ).apply { setMargins(0, 0, 0, 8.dpToPx()) }
 
                     setOnClickListener {
-                        val parent = this@apply.parent as ViewGroup
-                        for (j in 0 until parent.childCount) {
-                            val sibling = parent.getChildAt(j)
-                            if (sibling is Button) {
-                                sibling.isEnabled = false
-                            }
-                        }
-
                         if (text == correctAnswer) {
-                            setBackgroundColor(0xFF4CAF50.toInt()) // zielony
-                            postDelayed({ scrollOrFinish(i, scrollView, container) }, 500)
+                            highlightButton(this, true) {
+                                scrollOrFinish(i, scrollView, container)
+                            }
                         } else {
-                            setBackgroundColor(0xFFF44336.toInt()) // czerwony
-                            startShakeAnimation(this)
-                            postDelayed({
-                                for (j in 0 until parent.childCount) {
-                                    val sibling = parent.getChildAt(j)
-                                    if (sibling is Button) {
-                                        sibling.isEnabled = true
-                                        sibling.setBackgroundResource(android.R.drawable.btn_default)
-                                    }
-                                }
-                            }, 600)
+                            highlightButton(this, false)
+                            shakeView(this)
                         }
                     }
                 }
@@ -135,9 +127,6 @@ class FlashcardActivity : AppCompatActivity() {
 
         scrollView.post {
             scrollView.scrollTo(0, 0)
-            if (videoViews.isNotEmpty()) {
-                videoViews[0].start()
-            }
         }
     }
 
@@ -145,29 +134,50 @@ class FlashcardActivity : AppCompatActivity() {
         if (index + 1 < container.childCount) {
             val nextCard = container.getChildAt(index + 1)
             val startX = scrollView.scrollX
-            val endX = nextCard.left
+            val endX = nextCard.left - 20.dpToPx()
 
-            val animator = ValueAnimator.ofInt(startX, endX).apply {
-                duration = 400
-                addUpdateListener { valueAnimator ->
-                    scrollView.scrollTo(valueAnimator.animatedValue as Int, 0)
-                }
+            val animator = ValueAnimator.ofInt(startX, endX)
+            animator.duration = 300
+            animator.addUpdateListener { valueAnimator ->
+                val scrollPos = valueAnimator.animatedValue as Int
+                scrollView.scrollTo(scrollPos, 0)
             }
             animator.start()
 
-            videoViews.getOrNull(index)?.pause()
-            videoViews.getOrNull(index + 1)?.seekTo(0)
-            videoViews.getOrNull(index + 1)?.start()
+            // Pause all videos
+            videoViews.forEach { it.pause() }
+
         } else {
             Toast.makeText(this, "Gratulacje! Koniec fiszek.", Toast.LENGTH_SHORT).show()
             finish()
         }
     }
 
-    private fun startShakeAnimation(view: View) {
+    private fun highlightButton(button: Button, isCorrect: Boolean, onEnd: (() -> Unit)? = null) {
+        val color = if (isCorrect) Color.parseColor("#A5D6A7") else Color.parseColor("#EF9A9A")
+        val originalDrawable = button.background
+
+        val drawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 24f
+            setColor(color)
+        }
+
+        button.background = drawable
+        button.isEnabled = false
+
+        button.postDelayed({
+            button.background = originalDrawable
+            button.isEnabled = true
+            onEnd?.invoke()
+        }, 400)
+    }
+
+    private fun shakeView(view: View) {
         val shake = TranslateAnimation(0f, 10f, 0f, 0f).apply {
             duration = 60
-            interpolator = CycleInterpolator(5f)
+            repeatCount = 3
+            repeatMode = TranslateAnimation.REVERSE
         }
         view.startAnimation(shake)
     }
@@ -194,9 +204,21 @@ class FlashcardActivity : AppCompatActivity() {
                 Flashcard("grapes", drawableResId = R.drawable.grapes)
             )
             "Przedmioty" -> listOf(
-                Flashcard("pencil", uri = Uri.parse("android.resource://com.example.languageflashcards/${R.raw.pencil}"), isVideo = true),
-                Flashcard("glasses", uri = Uri.parse("android.resource://com.example.languageflashcards/${R.raw.glasses}"), isVideo = true),
-                Flashcard("playing_cards", uri = Uri.parse("android.resource://com.example.languageflashcards/${R.raw.playing_cards}"), isVideo = true),
+                Flashcard(
+                    nameWithoutExtension = "pencil",
+                    uri = Uri.parse("android.resource://$packageName/${R.raw.pencil}"),
+                    isVideo = true
+                ),
+                Flashcard(
+                    nameWithoutExtension = "glasses",
+                    uri = Uri.parse("android.resource://$packageName/${R.raw.glasses}"),
+                    isVideo = true
+                ),
+                Flashcard(
+                    nameWithoutExtension = "playing_cards",
+                    uri = Uri.parse("android.resource://$packageName/${R.raw.playing_cards}"),
+                    isVideo = true
+                ),
                 Flashcard("chair", drawableResId = R.drawable.chair)
             )
             else -> listOf(
