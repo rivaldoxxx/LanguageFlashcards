@@ -1,48 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
-    android:background="#FFFFFF">
+    android:fillViewport="true"
+    android:background="@drawable/gradient_background">
 
-    <TextView
-        android:id="@+id/categoryTitle"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Wybierz kategorię"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="32dp"
-        android:textColor="#2E7D32"/>
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
 
-    <Button
-        android:id="@+id/buttonAnimals"
-        android:layout_width="250dp"
-        android:layout_height="wrap_content"
-        android:text="Zwierzęta"
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp"
-        android:backgroundTint="#4CAF50"
-        android:textColor="#FFFFFF"/>
+        <!-- Ikona lub logo -->
+        <ImageView
+            android:id="@+id/appIcon"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:src="@drawable/wieloryb"
+            android:contentDescription="App Icon"
+            android:layout_marginBottom="24dp" />
 
-    <Button
-        android:id="@+id/buttonFood"
-        android:layout_width="250dp"
-        android:layout_height="wrap_content"
-        android:text="Jedzenie"
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp"
-        android:backgroundTint="#4CAF50"
-        android:textColor="#FFFFFF"/>
+        <!-- Nagłówek -->
+        <TextView
+            android:id="@+id/categoryTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wybierz kategorię"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:layout_marginBottom="32dp" />
 
-    <Button
-        android:id="@+id/buttonObjects"
-        android:layout_width="250dp"
-        android:layout_height="wrap_content"
-        android:text="Przedmioty"
-        android:textSize="18sp"
-        android:backgroundTint="#4CAF50"
-        android:textColor="#FFFFFF"/>
-</LinearLayout>
+        <!-- Przycisk 1 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/button_background"
+            android:padding="1dp">
+
+            <Button
+                android:id="@+id/buttonAnimals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🐾 Zwierzęta"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@android:color/transparent"
+                android:textColor="#2E7D32"
+                android:padding="16dp" />
+        </LinearLayout>
+
+        <!-- Przycisk 2 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/button_background"
+            android:padding="1dp">
+
+            <Button
+                android:id="@+id/buttonFood"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🍎 Jedzenie"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@android:color/transparent"
+                android:textColor="#2E7D32"
+                android:padding="16dp" />
+        </LinearLayout>
+
+        <!-- Przycisk 3 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_background"
+            android:padding="1dp">
+
+            <Button
+                android:id="@+id/buttonObjects"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📦 Przedmioty"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@android:color/transparent"
+                android:textColor="#2E7D32"
+                android:padding="16dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
