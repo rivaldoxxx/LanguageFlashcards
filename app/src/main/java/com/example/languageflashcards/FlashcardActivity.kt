@@ -83,6 +83,8 @@ class FlashcardActivity : AppCompatActivity() {
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ).apply { setMargins(0, 8.dpToPx(), 0, 8.dpToPx()) }
 
+                    setButtonStyle() // Apply custom button style
+
                     setOnClickListener {
                         videoView.seekTo(0)
                         videoView.start()
@@ -108,8 +110,11 @@ class FlashcardActivity : AppCompatActivity() {
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ).apply { setMargins(0, 0, 0, 8.dpToPx()) }
 
+                    setButtonStyle() // Apply custom button style
+
                     setOnClickListener {
                         if (text == correctAnswer) {
+                            correctAnswers++ // Increment correct answers
                             highlightButton(this, true) {
                                 scrollOrFinish(i, scrollView, container)
                             }
@@ -130,6 +135,17 @@ class FlashcardActivity : AppCompatActivity() {
         }
     }
 
+    // Rest of the code remains unchanged
+    private fun Button.setButtonStyle() {
+        val drawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 10f // Set corner radius to 10
+            setStroke(2.dpToPx(), Color.parseColor("#2E7D32")) // Set outline color to #2E7D32
+            setColor(Color.parseColor("#FFFFFF"))
+        }
+        background = drawable
+    }
+
     private fun scrollOrFinish(index: Int, scrollView: LockableHorizontalScrollView, container: LinearLayout) {
         if (index + 1 < container.childCount) {
             val nextCard = container.getChildAt(index + 1)
@@ -146,10 +162,13 @@ class FlashcardActivity : AppCompatActivity() {
 
             // Pause all videos
             videoViews.forEach { it.pause() }
-
         } else {
             Toast.makeText(this, "Gratulacje! Koniec fiszek.", Toast.LENGTH_SHORT).show()
             finish()
+        }
+        if (index + 1 >= container.childCount) {
+            // If last card is reached but less than 4 correct answers, show message
+            Toast.makeText(this, "Odpowiedz poprawnie na wszystkie fiszki ($correctAnswers/4).", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -159,15 +178,16 @@ class FlashcardActivity : AppCompatActivity() {
 
         val drawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = 24f
+            cornerRadius = 10f // Maintain corner radius
             setColor(color)
+            setStroke(2.dpToPx(), Color.parseColor("#2E7D32")) // Maintain outline
         }
 
         button.background = drawable
         button.isEnabled = false
 
         button.postDelayed({
-            button.background = originalDrawable
+            button.setButtonStyle() // Restore styled background
             button.isEnabled = true
             onEnd?.invoke()
         }, 400)
