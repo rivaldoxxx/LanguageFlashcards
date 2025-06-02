@@ -17,6 +17,7 @@ class FlashcardActivity : AppCompatActivity() {
 
     private val numberOfFlashcards = 4
     private val videoViews = mutableListOf<VideoView>()
+    private var correctAnswers = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
