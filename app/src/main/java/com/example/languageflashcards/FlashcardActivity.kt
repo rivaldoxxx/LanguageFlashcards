@@ -1,6 +1,7 @@
 package com.example.languageflashcards
 
 import android.animation.ValueAnimator
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -17,6 +18,9 @@ class FlashcardActivity : AppCompatActivity() {
 
     private val numberOfFlashcards = 4
     private val videoViews = mutableListOf<VideoView>()
+
+    private lateinit var flashcards: List<Flashcard>
+    private var currentFlashcardIndex = 0
     private var correctAnswers = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,113 +31,97 @@ class FlashcardActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.flashcardCategory).text = "Kategoria: $category"
         findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
 
-        val scrollView = findViewById<LockableHorizontalScrollView>(R.id.scrollView)
-        val container = findViewById<LinearLayout>(R.id.carouselContainer)
-        scrollView.isScrollingEnabled = false
-        val displayMetrics = resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
-        val cardWidth = 300.dpToPx()
-        val sidePadding = (screenWidth - cardWidth) / 2
+        flashcards = getFlashcardsForCategory(category).shuffled().take(numberOfFlashcards)
+        loadFlashcard(currentFlashcardIndex)
+    }
 
-        container.setPadding(sidePadding, 0, sidePadding, 0)
+    private fun loadFlashcard(index: Int) {
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val imageSize = if (isLandscape) 250.dpToPx() else 400.dpToPx()
+        val maxContainerWidth = if (isLandscape) 400.dpToPx() else 500.dpToPx()
 
-        val flashcards = getFlashcardsForCategory(category).shuffled()
+        val container = findViewById<LinearLayout>(R.id.flashcardContainer)
+        container.removeAllViews()
+        container.layoutParams = FrameLayout.LayoutParams(
+            maxContainerWidth,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+        if (index >= flashcards.size) {
+            Toast.makeText(this, "Gratulacje! Ukończyłeś wszystkie fiszki!", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
 
-        for (i in 0 until numberOfFlashcards) {
-            val flashcard = flashcards[i % flashcards.size]
-            val correctAnswer = flashcard.nameWithoutExtension
-            val allNames = flashcards.map { it.nameWithoutExtension }.shuffled()
-            val wrongAnswers = allNames.filter { it != correctAnswer }.take(2).toMutableList()
-            wrongAnswers.add(Random.nextInt(0, 3), correctAnswer)
+        val flashcard = flashcards[index]
+        val correctAnswer = flashcard.nameWithoutExtension
 
-            val card = LinearLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(300.dpToPx(), ViewGroup.LayoutParams.MATCH_PARENT).apply {
-                    setMargins(32, 0, 32, 0)
+        // Obrazek lub wideo
+        if (flashcard.isVideo) {
+            val videoView = VideoView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(imageSize, imageSize)
+                setVideoURI(flashcard.uri)
+                setOnPreparedListener {
+                    it.isLooping = false
                 }
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
+
             }
 
-            if (flashcard.isVideo) {
-                val videoView = VideoView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(200.dpToPx(), 200.dpToPx())
-                    setZOrderOnTop(true)
-
-                    setOnPreparedListener { mp ->
-                        mp.isLooping = false
-                        mp.setVolume(1f, 1f)
-                        start()
-                        pause()
-                    }
-
-                    setOnErrorListener { _, _, _ ->
-                        Toast.makeText(this@FlashcardActivity, "Nie można odtworzyć wideo", Toast.LENGTH_SHORT).show()
-                        true
-                    }
-
-                    flashcard.uri?.let { setVideoURI(it) }
+            val replayButton = Button(this).apply {
+                text = "▶️ Odtwórz"
+                setButtonStyle()
+                setOnClickListener {
+                    videoView.seekTo(0)
+                    videoView.start()
                 }
-
-                videoViews.add(videoView)
-                card.addView(videoView)
-
-                val replayButton = Button(this).apply {
-                    text = "▶️ Odtwórz"
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { setMargins(0, 8.dpToPx(), 0, 8.dpToPx()) }
-
-                    setButtonStyle() // Apply custom button style
-
-                    setOnClickListener {
-                        videoView.seekTo(0)
-                        videoView.start()
-                    }
-                }
-
-                card.addView(replayButton)
-            } else {
-                val imageView = ImageView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(200.dpToPx(), 200.dpToPx())
-                    setImageResource(flashcard.drawableResId!!)
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    setPadding(0, 0, 0, 16.dpToPx())
-                }
-                card.addView(imageView)
             }
 
-            for (answer in wrongAnswers) {
-                val button = Button(this).apply {
-                    text = answer
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { setMargins(0, 0, 0, 8.dpToPx()) }
+            container.addView(videoView)
+            container.addView(replayButton)
+        } else {
+            val imageView = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(imageSize, imageSize)
+                setImageResource(flashcard.drawableResId!!)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
 
-                    setButtonStyle() // Apply custom button style
+            container.addView(imageView)
+        }
 
-                    setOnClickListener {
-                        if (text == correctAnswer) {
-                            correctAnswers++ // Increment correct answers
-                            highlightButton(this, true) {
-                                scrollOrFinish(i, scrollView, container)
-                            }
-                        } else {
-                            highlightButton(this, false)
-                            shakeView(this)
+        // Odpowiedzi
+        val allNames = flashcards.map { it.nameWithoutExtension }.shuffled()
+        val wrongAnswers = allNames.filter { it != correctAnswer }.take(2).toMutableList()
+        wrongAnswers.add(Random.nextInt(0, 3), correctAnswer)
+
+        for (answer in wrongAnswers) {
+            val textSize1 = if (isLandscape) 16f else 20f
+
+            val button = Button(this).apply {
+                text = answer
+                textSize = textSize1
+                setButtonStyle()
+
+                setOnClickListener {
+                    if (answer == correctAnswer) {
+                        correctAnswers++
+                        highlightButton(this, true) {
+                            currentFlashcardIndex++
+                            loadFlashcard(currentFlashcardIndex)
                         }
+                    } else {
+                        highlightButton(this, false)
+                        shakeView(this)
                     }
                 }
-                card.addView(button)
             }
-
-            container.addView(card)
+            container.addView(button)
         }
+    }
 
-        scrollView.post {
-            scrollView.scrollTo(0, 0)
-        }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        loadFlashcard(currentFlashcardIndex)
     }
 
     // Rest of the code remains unchanged
